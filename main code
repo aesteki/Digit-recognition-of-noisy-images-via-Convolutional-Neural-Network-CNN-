@@ -1,0 +1,75 @@
+clc
+close all
+clear all
+
+Nsim = 10000;
+Aj = [0 1 1 1 1;
+      1 0 1 0 1;
+      1 1 0 1 0;
+      1 0 1 0 1;
+      1 1 0 1 0];
+[N,~] = size(Aj);
+D = diag(Aj*ones(N,1));
+L = D - Aj;
+I = eye(N);
+
+WCA = 2;
+dt1 = .1;
+dt2 = .1;
+dt3 = .1;
+w = .001;
+1;
+TV = 1;
+a = zeros(N,1);
+for i = 1:N
+    a(i,1) = i;
+end
+x_star(:,1) = zeros(N,1);
+x = .01*randn(N,Nsim+1);
+x1 = x;
+
+inter_iteration = 1;
+v = zeros(N,inter_iteration);
+p = zeros(N,inter_iteration);
+
+for k = 1:Nsim
+    f = a.*x(:,k).^2+TV*sin(a*w*k).*x(:,k);
+    df_x = 2*a.*x(:,k)+TV*sin(a*w*k);
+    d2f_x = diag(2*a);
+    df_xt = TV*a*w.*cos(a*w*k).*x(:,k);
+
+    df_x1 = 2*a.*x1(:,k)+TV*sin(a*w*k);
+    d2f_x1 = diag(2*a);
+    df_xt1 = TV*a*w.*cos(a*w*k).*x1(:,k);
+
+    v(:,1) = 0*v(:,end);
+    p(:,1) = 0*p(:,end);
+
+    for j = 1:inter_iteration
+        if WCA == 1
+            p(:,j+1) = p(:,j) - dt1*(p(:,j)-df_x-df_xt+L*p(:,j)+v(:,j));
+            v(:,j+1) = v(:,j) + dt1*L*p(:,j);
+        end
+        if WCA == 2
+            p(:,j+1) = p(:,j) + dt2*(-d2f_x*p(:,j)+(df_x+df_xt)-v(:,j)-L*p(:,j));
+            v(:,j+1) = v(:,j) + dt2*(L*p(:,j)+L*(-d2f_x*p(:,j)+(df_x+df_xt)-v(:,j)));
+        end
+    end
+    pk = p(:,end);
+    x(:,k+1) = x(:,k) - dt3*inv(d2f_x)*(pk+L*x(:,k));
+
+    x1(:,k+1) = x1(:,k) - dt3*(inv(d2f_x1)*(df_x1+df_xt1)+inv(d2f_x1)*L*x1(:,k));
+
+    if TV == 1
+        x_star(:,k+1) = -1/2*sum(sin(a*w*k))/sum(a);
+    else
+        x_star(:,k+1) = 0;
+    end
+end
+
+figure
+sim = 0:1:Nsim;
+plot(sim,x1,'r',sim,x_star,'k','LineWidth',3)
+
+
+Published with MATLAB® R2020b
